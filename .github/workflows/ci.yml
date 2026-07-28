@@ -1,0 +1,66 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+
+  pull_request:
+    branches:
+      - main
+
+jobs:
+
+  test:
+
+    name: Test and Lint
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run Ruff
+        run: |
+          ruff check .
+
+      - name: Run tests
+        run: |
+          python -m pytest
+
+
+  deploy:
+
+    name: Blue-Green Deployment
+
+    runs-on: self-hosted
+
+    needs:
+      - test
+
+    steps:
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Deploy using Blue-Green strategy
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+
+        run: |
+          chmod +x deployment/blue_green_deploy.sh
+
+          ./deployment/blue_green_deploy.sh
